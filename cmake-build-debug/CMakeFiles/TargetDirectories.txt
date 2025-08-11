@@ -1,0 +1,3 @@
+/Users/retr0/Desktop/turd/Compiler/cmake-build-debug/CMakeFiles/Compiler.dir
+/Users/retr0/Desktop/turd/Compiler/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/retr0/Desktop/turd/Compiler/cmake-build-debug/CMakeFiles/rebuild_cache.dir
