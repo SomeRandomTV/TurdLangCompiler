@@ -1,8 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-
-#pragma once
+#include <fstream>
 
 enum class TokenType {
     // Keywords
@@ -52,38 +51,56 @@ enum class TokenType {
     IDENTIFIER,         // variable name
     INT_LIT,            // 123
     FLOAT_LIT,          // 123.456
-    STR_LIT             // "text" or 'text'
+    STR_LIT,             // "text" or 'text'
+
+    UNKNOWN,            // unknown token
+
+
 };
 
 
-typedef struct Token {
-    std::string lexeme;     // code lexeme
-    TokenType type;         // corresponding token
-    int line;               // line number
-    int column;             // column number
-} Token;
+/*
+ * Token Struct
+ *
+ * Holds the lexeme and token type
+ */
+struct Token {
+    std::string lexeme;      // lexeme built
+    TokenType type;   // type of token
+    int line;           // line number
+    int column;         // column number
 
+    // struct constructor
+    Token() {
+        lexeme = "";
+        type = TokenType::UNKNOWN;
+        line = 1;
+        column = 1;
+    }
+};
+
+/*
+ * Lexer class
+ *
+ * Holds all the functions for lexical analysis
+ */
 class Lexer {
-    public:
-    explicit Lexer(const std::string &source);     // initialize the lexer and open the file
-    void printTokens() const;
-    void printSource() const;
-    std::vector<Token> tokenize();
+public:
+
+    // constructor that takes in file name and checks if opened
+    explicit Lexer(const std::string& source);
+    void tokenize();      // parses source code collecting and classifying them
+    TokenType get_token(const std::string &lexeme);
+    std::vector<Token> tokens;   // holds all tokens
 
 
 private:
-    std::string source;           // entire source code from file
-    std::vector<Token> tokens;    // all tokens found
-    size_t current = 0;           // current character index
-    int line = 1;                 // current line number
-    int column = 1;               // current column number
 
-    // Helpers
-    char peek() const;
-    char peekNext() const;
+    std::ifstream file;          // input file stream
+    Token token;            // holds the lexeme and token type
+    int line;                // line number
+    int column;              // column number
 
-    // Tokenizing rules
-    void identifier();          // tokenizing for idents
-    void number();              // tokeninzing for int_lit and float_lit
-    void stringLiteral();       // string tokenizing
 };
+
+
