@@ -2,105 +2,76 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <unordered_map>
 
 enum class TokenType {
     // Keywords
-    KEY_PRINT,          // print
-    KEY_IF,             // if
-    KEY_ELSE,           // else
-    KEY_READ,           // read
-    KEY_WHILE,          // while
-    KEY_FOR,            // for
+    KEY_PRINT, KEY_IF, KEY_ELSE, KEY_READ, KEY_WHILE, KEY_FOR,
 
     // Delimiters
-    LEFT_PAREN,         // (
-    RIGHT_PAREN,        // )
-    LEFT_BRACE,         // {
-    RIGHT_BRACE,        // }
-    LEFT_BRACKET,       // [
-    RIGHT_BRACKET,      // ]
-    COMMA,              // ,
-    SEMICOLON,          // ;
-    COLON,              // :
+    LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
+    LEFT_BRACKET, RIGHT_BRACKET, COMMA, SEMICOLON, COLON,
 
     // Operators
-    ADD_OP,             // +
-    SUB_OP,             // -
-    MUL_OP,             // *
-    DIV_OP,             // /
-    MOD_OP,             // %
-    POW_OP,             // **
-    AND_OP,             // &&
-    OR_OP,              // ||
-    NOT_OP,             // !
-    INT_DIV_OP,         // //
-    ASSIGN_OP,          // =
-    EQUAL_OP,           // ==
-    NOT_EQUAL_OP,       // !=
-    GREATER_OP,         // >
-    GEQUAL_OP,          // >=
-    LESSER_OP,          // <
-    LEQUAL_OP,          // <=
+    ADD_OP, SUB_OP, MUL_OP, DIV_OP, MOD_OP, POW_OP,
+    AND_OP, OR_OP, NOT_OP, INT_DIV_OP,
+    ASSIGN_OP, EQUAL_OP, NOT_EQUAL_OP,
+    GREATER_OP, GEQUAL_OP, LESSER_OP, LEQUAL_OP,
 
     // Data types
-    DATATYPE_INT,       // int
-    DATATYPE_FLOAT,     // float
-    DATATYPE_STRING,    // string
+    DATATYPE_INT, DATATYPE_FLOAT, DATATYPE_STRING,
 
     // Literals / identifiers
-    IDENTIFIER,         // variable name
-    INT_LIT,            // 123
-    FLOAT_LIT,          // 123.456
-    STR_LIT,             // "text" or 'text'
+    IDENTIFIER, INT_LIT, FLOAT_LIT, STR_LIT,
 
-    UNKNOWN,            // unknown token
-
-
+    // Special
+    END_OF_FILE, UNKNOWN
 };
 
-
-/*
- * Token Struct
- *
- * Holds the lexeme and token type
- */
 struct Token {
-    std::string lexeme;      // lexeme built
-    TokenType type;   // type of token
-    int line;           // line number
-    int column;         // column number
+    std::string lexeme;
+    TokenType type;
+    int line;
+    int column;
 
-    // struct constructor
-    Token() {
-        lexeme = "";
-        type = TokenType::UNKNOWN;
-        line = 1;
-        column = 1;
-    }
+    Token(
+        std::string lex = "",
+        TokenType t = TokenType::UNKNOWN,
+        int l = 1,
+        int c = 1)
+        : lexeme(std::move(lex)), type(t), line(l), column(c) {}
 };
 
-/*
- * Lexer class
- *
- * Holds all the functions for lexical analysis
- */
+
 class Lexer {
 public:
+    explicit Lexer(const std::string& filename);
 
-    // constructor that takes in file name and checks if opened
-    explicit Lexer(const std::string& source);
-    void tokenize();      // parses source code collecting and classifying them
-    TokenType get_token(const std::string &lexeme);
-    std::vector<Token> tokens;   // holds all tokens
-
+    std::vector<Token> tokenize();
+    void print_tokens() const;
+    [[noreturn]] static void lexer_error(const std::string& msg, int line, int column);
+    const std::vector<Token>& get_tokens() const { return tokens_; }
 
 private:
+    void skip_whitespace();
+    Token read_string_literal(char quote_char);
+    Token read_identifier();
+    Token read_number();
 
-    std::ifstream file;          // input file stream
-    Token token;            // holds the lexeme and token type
-    int line;                // line number
-    int column;              // column number
+    char peek() const;
+    char advance();
+    bool is_at_end() const;
+    Token make_token(TokenType type, std::string lexeme) const;
 
+    static TokenType classify_identifier(const std::string& lexeme);
+
+    mutable std::ifstream file_;        // input file stream
+    std::vector<Token> tokens_;         // holds all the tokens
+    int line_ = 1;                      // line things start
+    int column_ = 1;
+
+    // static lookup tables
+    static const std::unordered_map<std::string, TokenType> keywords_;
+    static const std::unordered_map<std::string, TokenType> operators_;
+    static const std::unordered_map<char, TokenType> single_char_tokens_;
 };
-
-

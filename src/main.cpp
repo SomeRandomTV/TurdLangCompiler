@@ -15,6 +15,7 @@ int main(const int argc, char **argv) {
     std::cout << source << std::endl;
     Lexer Lexer(source);
     Lexer.tokenize();
+    Lexer.print_tokens();
     std::cout << std::endl;
 
 }
