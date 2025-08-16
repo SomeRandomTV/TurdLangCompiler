@@ -59,24 +59,23 @@ std::vector<Token> Lexer::tokenize() {
         skip_whitespace();
         if (is_at_end()) break;
 
-        char current = advance();
-        int token_column = column_ - 1; // Store column where token starts
+        // Peek at the current character without consuming it
+        char current = peek();
+        int token_column = column_;
 
         try {
             if (current == '\'' || current == '"') {
+                advance(); // consume the quote character
                 tokens_.push_back(read_string_literal(current));
             }
             else if (std::isalpha(current) || current == '_') {
-                file_.unget();
-                column_--;
                 tokens_.push_back(read_identifier());
             }
             else if (std::isdigit(current) || current == '.') {
-                file_.unget();
-                column_--;
                 tokens_.push_back(read_number());
             }
             else if (auto it = single_char_tokens_.find(current); it != single_char_tokens_.end()) {
+                advance(); // consume the first character
                 const char next = peek();
                 std::string two_char = std::string(1, current) + next;
 
@@ -88,6 +87,7 @@ std::vector<Token> Lexer::tokenize() {
                 }
             }
             else {
+                advance(); // consume the unknown character
                 tokens_.push_back(make_token(TokenType::UNKNOWN, std::string(1, current)));
             }
         }
@@ -232,7 +232,7 @@ void Lexer::skip_whitespace() {
 }
 
 Token Lexer::make_token(TokenType type, const std::string& lexeme) const {
-    return Token(lexeme, type, line_, column_ - lexeme.length());
+    return Token(lexeme, type, line_, column_ - static_cast<int>(lexeme.length()));
 }
 
 TokenType Lexer::classify_identifier(const std::string& lexeme) {
