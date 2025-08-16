@@ -4,9 +4,10 @@
 #include <fstream>
 #include <unordered_map>
 
-enum class TokenType {
+enum TokenType {
     // Keywords
     KEY_PRINT, KEY_IF, KEY_ELSE, KEY_READ, KEY_WHILE, KEY_FOR,
+    KEY_FUNCTION, KEY_VAR, KEY_RETURN, KEY_TRUE, KEY_FALSE,
 
     // Delimiters
     LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
@@ -18,8 +19,11 @@ enum class TokenType {
     ASSIGN_OP, EQUAL_OP, NOT_EQUAL_OP,
     GREATER_OP, GEQUAL_OP, LESSER_OP, LEQUAL_OP,
 
+    // Parameters
+    PARAM_NAME, PARAM_INT, PARAM_FLOAT, PARAM_STRING, PARAM_BOOL, PARAM_CHAR,
+
     // Data types
-    DATATYPE_INT, DATATYPE_FLOAT, DATATYPE_STRING,
+    DATATYPE_INT, DATATYPE_FLOAT, DATATYPE_STRING, DATATYPE_BOOL, DATATYPE_CHAR,
 
     // Literals / identifiers
     IDENTIFIER, INT_LIT, FLOAT_LIT, STR_LIT,
@@ -61,7 +65,7 @@ private:
     char peek() const;
     char advance();
     bool is_at_end() const;
-    Token make_token(TokenType type, std::string lexeme) const;
+    Token make_token(TokenType type, const std::string &lexeme) const;
 
     static TokenType classify_identifier(const std::string& lexeme);
 

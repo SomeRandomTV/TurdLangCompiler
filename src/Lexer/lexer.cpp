@@ -3,14 +3,19 @@
 #include <stdexcept>
 #include <sstream>
 
+// === Keyword tokens ===
 const std::unordered_map<std::string, TokenType> Lexer::keywords_ = {
     {"print", TokenType::KEY_PRINT}, {"if", TokenType::KEY_IF},
     {"else", TokenType::KEY_ELSE}, {"read", TokenType::KEY_READ},
     {"while", TokenType::KEY_WHILE}, {"for", TokenType::KEY_FOR},
+    {"function", TokenType::KEY_FUNCTION}, {"var", TokenType::KEY_VAR},
+    {"return", TokenType::KEY_RETURN}, {"true", TokenType::KEY_TRUE},
+    {"false", TokenType::KEY_FALSE},
     {"int", TokenType::DATATYPE_INT}, {"float", TokenType::DATATYPE_FLOAT},
     {"string", TokenType::DATATYPE_STRING}
 };
 
+// === Operator tokens ===
 const std::unordered_map<std::string, TokenType> Lexer::operators_ = {
     {"**", TokenType::POW_OP}, {"&&", TokenType::AND_OP},
     {"||", TokenType::OR_OP}, {"==", TokenType::EQUAL_OP},
@@ -18,6 +23,7 @@ const std::unordered_map<std::string, TokenType> Lexer::operators_ = {
     {"<=", TokenType::LEQUAL_OP}, {"//", TokenType::INT_DIV_OP}
 };
 
+// === Single char tokens
 const std::unordered_map<char, TokenType> Lexer::single_char_tokens_ = {
     {'(', TokenType::LEFT_PAREN}, {')', TokenType::RIGHT_PAREN},
     {'{', TokenType::LEFT_BRACE}, {'}', TokenType::RIGHT_BRACE},
@@ -33,7 +39,7 @@ const std::unordered_map<char, TokenType> Lexer::single_char_tokens_ = {
  * and reserve 1000 token space for now
  * @param filename file containing source code
  */
-Lexer::Lexer(const std::string& filename) : file_(filename) {
+Lexer::Lexer(const std::string& filename) : file_(filename), line_(1), column_(1) {
     if (!file_.is_open()) {
         throw std::runtime_error("Unable to open file: " + filename);
     }
@@ -57,7 +63,7 @@ std::vector<Token> Lexer::tokenize() {
         int token_column = column_ - 1; // Store column where token starts
 
         try {
-            if (current == '"' || current == '\'') {
+            if (current == '\'' || current == '"') {
                 tokens_.push_back(read_string_literal(current));
             }
             else if (std::isalpha(current) || current == '_') {
@@ -75,7 +81,7 @@ std::vector<Token> Lexer::tokenize() {
                 std::string two_char = std::string(1, current) + next;
 
                 if (auto op_it = operators_.find(two_char); op_it != operators_.end()) {
-                    advance();
+                    advance(); // consume the second character
                     tokens_.push_back(make_token(op_it->second, two_char));
                 } else {
                     tokens_.push_back(make_token(it->second, std::string(1, current)));
@@ -85,8 +91,9 @@ std::vector<Token> Lexer::tokenize() {
                 tokens_.push_back(make_token(TokenType::UNKNOWN, std::string(1, current)));
             }
         }
-        catch (std::runtime_error&) {
-            lexer_error("Invalid character", line_, token_column);
+        catch (const std::runtime_error& e) {
+            // Re-throw the error to maintain the original error handling
+            throw;
         }
         catch (const std::exception& e) {
             lexer_error(e.what(), line_, token_column);
@@ -97,7 +104,6 @@ std::vector<Token> Lexer::tokenize() {
     return tokens_;
 }
 
-
 Token Lexer::read_string_literal(char quote_char) {
     std::string lexeme;
     int start_column = column_ - 1;
@@ -105,38 +111,54 @@ Token Lexer::read_string_literal(char quote_char) {
     while (!is_at_end()) {
         char current = advance();
 
+        // Check for closing quote
         if (current == quote_char) {
-            return Token(lexeme, TokenType::STR_LIT, line_, start_column);
+            // For single quotes, ensure we have exactly one character (excluding escape sequences)
+            if (quote_char == '\'' && lexeme.empty()) {
+                lexer_error("Character literal cannot be empty", line_, start_column);
+            }
+            
+            TokenType token_type = (quote_char == '\'') ? TokenType::DATATYPE_CHAR : TokenType::STR_LIT;
+            return Token(lexeme, token_type, line_, start_column);
         }
 
+        // Handle escape sequences
         if (current == '\\') {
             if (is_at_end()) {
                 lexer_error("Unterminated escape sequence in string", line_, column_);
             }
-            switch (char escaped = advance()) {
+            char escaped = advance();
+            
+            switch (escaped) {
                 case 'n': lexeme += '\n'; break;
                 case 't': lexeme += '\t'; break;
                 case 'r': lexeme += '\r'; break;
                 case '\\': lexeme += '\\'; break;
                 case '"': lexeme += '"'; break;
                 case '\'': lexeme += '\''; break;
+                case '0': lexeme += '\0'; break;
                 default:
+                    // For unknown escape sequences, include the backslash
                     lexeme += '\\';
                     lexeme += escaped;
                     break;
             }
         }
+        // Handle newlines
         else if (current == '\n') {
             line_++;
             column_ = 1;
             lexeme += current;
         }
+        // Regular characters
         else {
             lexeme += current;
         }
     }
 
+    // If we reach here, the string was not terminated
     lexer_error("Unterminated string literal", line_, start_column);
+    return Token("", TokenType::STR_LIT, line_, start_column); // Should never reach here
 }
 
 Token Lexer::read_identifier() {
@@ -209,8 +231,8 @@ void Lexer::skip_whitespace() {
     }
 }
 
-Token Lexer::make_token(TokenType type, std::string lexeme) const {
-    return Token(std::move(lexeme), type, line_, column_ - lexeme.length());
+Token Lexer::make_token(TokenType type, const std::string& lexeme) const {
+    return Token(lexeme, type, line_, column_ - lexeme.length());
 }
 
 TokenType Lexer::classify_identifier(const std::string& lexeme) {
@@ -221,7 +243,7 @@ TokenType Lexer::classify_identifier(const std::string& lexeme) {
 void Lexer::print_tokens() const {
     for (const auto& token : tokens_) {
         std::cout << "Line " << token.line << ", Col " << token.column
-                  << ": ' Lexeme: " << token.lexeme << "\t TokenType: ' -> "
-                  << static_cast<int>(token.type) << std::endl;
+                << ": Lexeme: '" << token.lexeme << "'\t TokenType: "
+                << static_cast<int>(token.type) << std::endl;
     }
 }

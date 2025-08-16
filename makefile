@@ -19,6 +19,7 @@ directories:
 	mkdir -p $(BIN_DIR)
 	mkdir -p $(OBJ_DIR)
 	mkdir -p $(OBJ_DIR)/Lexer
+	mkdir -p $(OBJ_DIR)/SynParser
 
 # Link
 $(TARGET): $(OBJS)
